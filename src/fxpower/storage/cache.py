@@ -13,7 +13,7 @@ class CachePaths:
     cache_file: Path
 
     @staticmethod
-    def default() -> "CachePaths":
+    def default() -> CachePaths:
         return CachePaths(cache_file=Path("data") / "cache.parquet")
 
 
@@ -24,7 +24,9 @@ def _ensure_parent_dir(path: Path) -> None:
 def _validate_cache_df(df: pd.DataFrame) -> pd.DataFrame:
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
-        raise ValueError(f"Cache dataframe missing columns: {missing}. Required: {REQUIRED_COLUMNS}")
+        raise ValueError(
+            f"Cache dataframe missing columns: {missing}. Required: {REQUIRED_COLUMNS}"
+        )
 
     # Keep only required columns, in stable order
     out = df.loc[:, list(REQUIRED_COLUMNS)].copy()
@@ -57,3 +59,35 @@ def write_cache(df: pd.DataFrame, path: Path) -> None:
     _ensure_parent_dir(path)
     normalized = _validate_cache_df(df)
     normalized.to_parquet(path, index=False)
+
+
+def merge_cache(existing: pd.DataFrame, incoming: pd.DataFrame) -> pd.DataFrame:
+    """Merge incoming rows into existing cache.
+
+    - Deduplicate by (date, base, quote)
+    - Incoming wins on conflicts
+    - Sort by date, base, quote (stable)
+    """
+    left = (
+        _validate_cache_df(existing)
+        if not existing.empty
+        else pd.DataFrame(columns=list(REQUIRED_COLUMNS))
+    )
+    right = (
+        _validate_cache_df(incoming)
+        if not incoming.empty
+        else pd.DataFrame(columns=list(REQUIRED_COLUMNS))
+    )
+
+    if left.empty and right.empty:
+        return pd.DataFrame(columns=list(REQUIRED_COLUMNS))
+
+    combined = pd.concat([left, right], ignore_index=True)
+
+    # Incoming wins: keep last occurrence of each key
+    combined = combined.drop_duplicates(subset=["date", "base", "quote"], keep="last")
+
+    combined = combined.sort_values(by=["date", "base", "quote"], kind="mergesort").reset_index(
+        drop=True
+    )
+    return combined
