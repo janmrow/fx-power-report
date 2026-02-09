@@ -76,6 +76,7 @@ def fetch_eur_timeseries(
     df = df.sort_values(by=["date", "quote"], kind="mergesort").reset_index(drop=True)
     return df
 
+
 def fetch_timeseries(
     start: date,
     end: date,
@@ -131,4 +132,3 @@ def fetch_timeseries(
 
     df = df.sort_values(by=["date", "base", "quote"], kind="mergesort").reset_index(drop=True)
     return df
-
