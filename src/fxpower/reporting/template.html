@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>fxpower report — {{ base }} (as of {{ as_of }})</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px 0; font-size: 22px; }
+    .sub { color: #666; margin-bottom: 18px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    .card { border: 1px solid #eee; border-radius: 10px; padding: 16px; background: #fff; }
+    .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .kpi { border: 1px solid #f0f0f0; border-radius: 10px; padding: 12px; }
+    .kpi .label { color: #666; font-size: 12px; }
+    .kpi .value { font-size: 18px; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; }
+    th { color: #444; font-weight: 600; }
+    .muted { color: #777; }
+    details { border: 1px solid #eee; border-radius: 10px; padding: 10px 12px; background: #fff; }
+    details + details { margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .pill { display: inline-block; border: 1px solid #eee; border-radius: 999px; padding: 2px 8px; font-size: 12px; color: #555; margin-left: 8px; }
+    .note { color: #666; font-size: 12px; margin-top: 8px; }
+    @media (max-width: 900px) {
+      .kpis { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>fxpower report — base {{ base }}</h1>
+    <div class="sub">
+      As of <strong>{{ as_of }}</strong> • Based on ~5y historical data • Not a forecast
+    </div>
+
+    <div class="grid">
+
+      <div class="card">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="label">Best overall target</div>
+            <div class="value">{{ kpi_best_overall }}</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Cheapest vs history</div>
+            <div class="value">{{ kpi_best_value }}</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Lowest risk (volatility)</div>
+            <div class="value">{{ kpi_lowest_risk }}</div>
+          </div>
+        </div>
+        <div class="note muted">
+          “Cheapest” means lower <code>{{ base }}</code> per 1 target (based on percentile & z-score).
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px 0; font-size:16px;">Overall ranking</h2>
+        {{ overall_table | safe }}
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px 0; font-size:16px;">Score breakdown</h2>
+        <div class="muted" style="margin-bottom:10px;">Value / Trend / Risk rankings</div>
+        <div style="display:grid; grid-template-columns:1fr; gap: 14px;">
+          <div>
+            <h3 style="margin:0 0 6px 0; font-size:14px;">Value vs history</h3>
+            {{ value_table | safe }}
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px 0; font-size:14px;">Trend</h3>
+            {{ trend_table | safe }}
+          </div>
+          <div>
+            <h3 style="margin:0 0 6px 0; font-size:14px;">Risk</h3>
+            {{ risk_table | safe }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px 0; font-size:16px;">Charts</h2>
+        {{ chart_overall_bar | safe }}
+        {{ chart_rates | safe }}
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px 0; font-size:16px;">Explain</h2>
+        <div class="muted" style="margin-bottom:10px;">Why each target ranks where it does.</div>
+        {% for item in explain %}
+          <details>
+            <summary>{{ item.target }} <span class="pill">overall {{ item.overall_score }}</span></summary>
+            <div style="margin-top:10px;">
+              <table>
+                <tr><th>Metric</th><th>Value</th><th class="muted">Interpretation</th></tr>
+                <tr><td>Rate today</td><td>{{ item.rate_today }}</td><td class="muted">{{ base }} per 1 {{ item.target }}</td></tr>
+                <tr><td>Percentile (5y)</td><td>{{ item.percentile_5y }}</td><td class="muted">Lower = cheaper</td></tr>
+                <tr><td>Z-score (5y)</td><td>{{ item.zscore_5y }}</td><td class="muted">Negative = below average</td></tr>
+                <tr><td>Momentum (60d)</td><td>{{ item.mom_60d }}</td><td class="muted">Positive = strengthening vs base</td></tr>
+                <tr><td>SMA200 diff</td><td>{{ item.sma_200_diff }}</td><td class="muted">Rate / SMA200 - 1</td></tr>
+                <tr><td>Volatility (90d)</td><td>{{ item.vol_90d }}</td><td class="muted">Higher = riskier</td></tr>
+              </table>
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
